@@ -1,12 +1,28 @@
 
-from utils.constants import Direction
+from utils.constants import Direction, Tile
 
 
 def is_wall(tile, maze):
     assert type(tile[0]) == int, "Position x must be an integer"
     assert type(tile[1]) == int, "Position y must be an integer"
     assert in_bounds(tile, maze), "Position out of bounds"
-    if maze[tile[1]][tile[0]] == 1:
+    if maze[tile[1]][tile[0]] == Tile.WALL:
+        return True
+    return False
+
+def is_coin(tile, maze):
+    assert type(tile[0]) == int, "Position x must be an integer"
+    assert type(tile[1]) == int, "Position y must be an integer"
+    assert in_bounds(tile, maze), "Position out of bounds"
+    if maze[tile[1]][tile[0]] == Tile.COIN:
+        return True
+    return False
+
+def is_powerup(tile, maze):
+    assert type(tile[0]) == int, "Position x must be an integer"
+    assert type(tile[1]) == int, "Position y must be an integer"
+    assert in_bounds(tile, maze), "Position out of bounds"
+    if maze[tile[1]][tile[0]] == Tile.POWERUP:
         return True
     return False
 
@@ -58,8 +74,12 @@ def action(tile, dir, new_dir, maze):
         dir = new_dir
     new_tile = move(tile, dir, maze)
     if is_wall(new_tile, maze):
-        return tile, None
-    return new_tile, dir
+        return tile, None, 0
+    reward = 0
+    if is_coin(new_tile, maze):
+        maze[new_tile[1]][new_tile[0]] = Tile.EMPTY
+        reward = 1
+    return new_tile, dir, reward
 
 
 def teleport(tile, maze):
