@@ -3,53 +3,16 @@ import numpy as np
 
 from utils import (
     Direction,
-    update,
+    action,
+    is_wall,
+    action,
     TILE_SIZE,
+    MAZE,
+    OFFSET,
 )
-
-from utils.general import is_wall, try_turning
-
-class Tile:
-    EMPTY = 0
-    WALL = 1
-    COIN = 2
-    POWERUP = 3
+from utils.general import action, is_wall
 
 
-
-MAZE = [
-    "============================",
-    "=............||............=",
-    "=.||||.|||||.||.|||||.||||.=",
-    "=o||||.|||||.||.|||||.||||o=",
-    "=.||||.|||||.||.|||||.||||.=",
-    "=..........................=",
-    "=.||||.||.||||||||.||.||||.=",
-    "=.||||.||.||||||||.||.||||.=",
-    "=......||....||....||......=",
-    "======.||||| || |||||.======",
-    "======.||||| || |||||.======",
-    "======.||    G     ||.======",
-    "======.|| |||--||| ||.======",
-    "======.|| |      | ||.======",
-    "      .   |      |   .      ",
-    "======.|| |      | ||.======",
-    "======.|| |||||||| ||.======",
-    "======.||          ||.======",
-    "======.|| |||||||| ||.======",
-    "======.|| |||||||| ||.======",
-    "=............||............=",
-    "=.||||.|||||.||.|||||.||||.=",
-    "=.||||.|||||.||.|||||.||||.=",
-    "=o..||.......S........||..o=",
-    "=||.||.||.||||||||.||.||.||=",
-    "=||.||.||.||||||||.||.||.||=",
-    "=......||....||....||......=",
-    "=.||||||||||.||.||||||||||.=",
-    "=.||||||||||.||.||||||||||.=",
-    "=..........................=",
-    "============================",
-]
 
 
 def load_maze(maze):
@@ -76,36 +39,39 @@ def load_maze(maze):
     assert maze_array[ghost_spawn[1]][ghost_spawn[0]] == 0, "Ghost spawn position is not empty"
     return maze_array, start_pos, ghost_spawn
 
-def draw_maze(screen, maze):
+def draw_maze(screen, maze, offset=0):
     w = maze.shape[1]
     h = maze.shape[0]
     for i in range(h):
         for j in range(w):
+            x = (j + offset) * TILE_SIZE
+            y = (i + offset) * TILE_SIZE
             if is_wall((j, i), maze):
-                pygame.draw.rect(screen, (33, 33, 255), (j * TILE_SIZE, i * TILE_SIZE, TILE_SIZE, TILE_SIZE))
+                pygame.draw.rect(screen, (33, 33, 255), (x, y, TILE_SIZE, TILE_SIZE))
             else:
-                pygame.draw.rect(screen, (0, 0, 0), (j * TILE_SIZE, i * TILE_SIZE, TILE_SIZE, TILE_SIZE))
+                pygame.draw.rect(screen, (0, 0, 100), (x, y, TILE_SIZE, TILE_SIZE))
 
-def draw_pacman(screen, pos):
-    pos =tuple(p*TILE_SIZE + TILE_SIZE/2 for p in pos)
+def draw_pacman(screen, boar_pos, drawing_offset, maze, offset=0):
+    pos = ((boar_pos[0] + drawing_offset[0] + offset) * TILE_SIZE,(boar_pos[1] + drawing_offset[1] + offset) * TILE_SIZE )
+    pos = (pos[0] + TILE_SIZE//2, pos[1] + TILE_SIZE//2)
     pygame.draw.circle(screen, (255, 255, 0), pos, TILE_SIZE//2)
     
 
 if __name__ == "__main__":
-
     maze, start_pos, ghost_spawn = load_maze(MAZE)
     w = maze.shape[1]
     h = maze.shape[0]
 
     pygame.init()
-    screen = pygame.display.set_mode((w * TILE_SIZE, h * TILE_SIZE))
+    screen = pygame.display.set_mode(((w + 2*OFFSET) * TILE_SIZE, (h + 2* OFFSET) * TILE_SIZE))
     pygame.display.set_caption("pacman")
     clock = pygame.time.Clock()
 
-    speed = 5
-    player_speed = 0.5
+    speed = 5/1000 
 
-    pos = start_pos
+    board_pos = start_pos
+    prev_board_pos = start_pos
+    drawing_offset = (0.0,0.0)
     dir = None
     new_dir = None # acts as a buffer for the next direction, executed on the next intersection
     running = True
@@ -115,8 +81,8 @@ if __name__ == "__main__":
                 running = False
 
         screen.fill((0, 0, 0))
-        draw_maze(screen, maze)
-        draw_pacman(screen, pos)
+        draw_maze(screen, maze, offset=OFFSET)
+        draw_pacman(screen, prev_board_pos, drawing_offset, maze, offset=OFFSET)
 
         pygame.display.flip()
         clock.tick(50)
@@ -131,7 +97,22 @@ if __name__ == "__main__":
         if keys[pygame.K_DOWN]:
             new_dir = Direction.DOWN
 
-        dir, new_dir = try_turning(pos, dir, new_dir, maze)
-        pos, dir = update(pos, dir, maze)
+        time = clock.get_time() 
+        distance = speed * time
+        if dir == Direction.LEFT:
+            drawing_offset = (drawing_offset[0] - distance, drawing_offset[1])
+        if dir == Direction.RIGHT:
+            drawing_offset = (drawing_offset[0] + distance, drawing_offset[1])
+        if dir == Direction.UP:
+            drawing_offset = (drawing_offset[0], drawing_offset[1] - distance)
+        if dir == Direction.DOWN:
+            drawing_offset = (drawing_offset[0], drawing_offset[1] + distance)
+
+        if abs(drawing_offset[0]) + abs(drawing_offset[1]) >= 1 or dir is None:
+            drawing_offset = (0.0, 0.0)
+            prev_board_pos = board_pos
+            board_pos, dir = action(board_pos, dir, new_dir, maze)
+            if dir == new_dir:
+                new_dir = None
 
     pygame.quit()
