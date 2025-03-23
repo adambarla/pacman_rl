@@ -12,3 +12,5 @@ from .constants import (
     Direction,
     Tile,
 )
+
+from .movable import Movable

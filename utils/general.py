@@ -65,21 +65,46 @@ def move(tile, dir, maze):
     return new_pos
 
 
-def action(tile, dir, new_dir, maze):
-    """
-    I am at tile, and I want to move in dir.
-    """
+def update_ghosts(ghost_states, maze):
+    dir_list = [Direction.LEFT, Direction.RIGHT, Direction.UP, Direction.DOWN]
+    # for dir in dir_list:
+    #     print("dir", dir)
+    return ghost_states
+
+def update_pacman(pacman_state, new_dir, maze):
+    tile, dir = pacman_state
     if new_dir and can_turn(dir, new_dir) \
         and not is_wall(move(tile, new_dir, maze), maze):
         dir = new_dir
     new_tile = move(tile, dir, maze)
     if is_wall(new_tile, maze):
-        return tile, None, 0
-    reward = 0
-    if is_coin(new_tile, maze):
-        maze[new_tile[1]][new_tile[0]] = Tile.EMPTY
-        reward = 1
-    return new_tile, dir, reward
+        return (tile, None)
+    return (new_tile, dir)
+
+def get_reward(state, maze):
+    pacman_state = state[0]
+    tile = pacman_state[0]
+    if is_coin(tile, maze):
+        maze[tile[1]][tile[0]] = Tile.EMPTY
+        return 1
+    if is_powerup(tile, maze):
+        maze[tile[1]][tile[0]] = Tile.EMPTY
+        return 5
+    # todo: if is_ghost
+    return 0
+    
+
+def action(state, new_dir, maze):
+    """
+    I am at tile, and I want to move in dir.
+    """
+    pacman_state = state[0]
+    ghost_states = state[1]
+    ghost_states = update_ghosts(ghost_states, maze)
+    pacman_state = update_pacman(pacman_state, new_dir, maze)
+    reward = get_reward(state, maze)
+
+    return (pacman_state, ghost_states), reward
 
 
 def teleport(tile, maze):

@@ -1,8 +1,9 @@
-import pygame
+import pygame as pg
 import numpy as np
 
 from utils import (
     Direction,
+    Movable,
     action,
     is_wall,
     is_coin,
@@ -46,91 +47,96 @@ def draw_maze(screen, maze, offset=0):
             x = (j + offset) * TILE_SIZE
             y = (i + offset) * TILE_SIZE
             if is_wall((j, i), maze):
-                pygame.draw.rect(screen, (33, 33, 255), (x, y, TILE_SIZE, TILE_SIZE))
+                pg.draw.rect(screen, (33, 33, 255), (x, y, TILE_SIZE, TILE_SIZE))
             elif is_powerup((j, i), maze):
-                pygame.draw.circle(screen, (255, 184, 174), (x + TILE_SIZE//2, y + TILE_SIZE//2), TILE_SIZE//4)
+                pg.draw.circle(screen, (255, 184, 174), (x + TILE_SIZE//2, y + TILE_SIZE//2), TILE_SIZE//4)
             elif is_coin((j, i), maze):
-                pygame.draw.circle(screen, (255, 184, 174), (x + TILE_SIZE//2, y + TILE_SIZE//2), TILE_SIZE//8)
+                pg.draw.circle(screen, (255, 184, 174), (x + TILE_SIZE//2, y + TILE_SIZE//2), TILE_SIZE//8)
 
-def draw_pacman(screen, boar_pos, drawing_offset, maze, offset=0):
-    pos = ((boar_pos[0] + drawing_offset[0] + offset) * TILE_SIZE,(boar_pos[1] + drawing_offset[1] + offset) * TILE_SIZE )
-    pos = (pos[0] + TILE_SIZE//2, pos[1] + TILE_SIZE//2)
-    pygame.draw.circle(screen, (255, 255, 0), pos, TILE_SIZE//2)
-    # draw aditional pacman one board width away and one board height away
+        
+def draw_movable(screen, movable, maze, offset=0, continuous=False):
     w = maze.shape[1]
     h = maze.shape[0]
-    if boar_pos[0] == 0:
-        pygame.draw.circle(screen, (255, 255, 0), (pos[0] + w * TILE_SIZE, pos[1]), TILE_SIZE//2)
-    if boar_pos[1] == 0:
-        pygame.draw.circle(screen, (255, 255, 0), (pos[0], pos[1] + h * TILE_SIZE), TILE_SIZE//2)
-    if boar_pos[0] == w - 1:
-        pygame.draw.circle(screen, (255, 255, 0), (pos[0] - w * TILE_SIZE, pos[1]), TILE_SIZE//2)
-    if boar_pos[1] == h - 1:
-        pygame.draw.circle(screen, (255, 255, 0), (pos[0], pos[1] - h * TILE_SIZE), TILE_SIZE//2)
-    
+    pos = ((movable.prev_pos[0] + offset) * TILE_SIZE,  (movable.prev_pos[1] + offset) * TILE_SIZE )
+    if not continuous:
+        pos = (pos[0] + movable.drawing_offset[0] * TILE_SIZE, pos[1] + movable.drawing_offset[1] * TILE_SIZE)
+    pos = (pos[0] + movable.size, pos[1] + movable.size)
+    pg.draw.circle(screen, movable.color, pos, movable.size)
+    # draw aditional movable one board width away and one board height away
+    if movable.prev_pos[0] == 0:
+        pg.draw.circle(screen, movable.color, (pos[0] + w * TILE_SIZE, pos[1]), movable.size)
+    if movable.prev_pos[1] == 0:
+        pg.draw.circle(screen, movable.color, (pos[0], pos[1] + h * TILE_SIZE), movable.size)
+    if movable.prev_pos[0] == w - 1:
+        pg.draw.circle(screen, movable.color, (pos[0] - w * TILE_SIZE, pos[1]), movable.size)
+    if movable.prev_pos[1] == h - 1:
+        pg.draw.circle(screen, movable.color, (pos[0], pos[1] - h * TILE_SIZE), movable.size)
 
 if __name__ == "__main__":
     maze, start_pos, ghost_spawn = load_maze(MAZE)
     w = maze.shape[1]
     h = maze.shape[0]
 
-    pygame.init()
-    screen = pygame.display.set_mode(((w + 2*OFFSET) * TILE_SIZE, (h + 2* OFFSET) * TILE_SIZE))
-    pygame.display.set_caption("pacman")
-    clock = pygame.time.Clock()
-    font = pygame.font.SysFont("berkeleymonotrial", 30)
+    pg.init()
+    screen = pg.display.set_mode(((w + 2*OFFSET) * TILE_SIZE, (h + 2* OFFSET) * TILE_SIZE))
+    pg.display.set_caption("pacman")
+    clock = pg.time.Clock()
+    font = pg.font.SysFont("berkeleymonotrial", 30)
 
     speed = 5/1000 
 
-    board_pos = start_pos
-    prev_board_pos = start_pos
-    drawing_offset = (0.0,0.0)
-    dir = None
+    pacman = Movable((255, 255, 0), start_pos)
+    ghosts = [Movable((255, 0, 0), ghost_spawn)]
     new_dir = None # acts as a buffer for the next direction, executed on the next intersection
     running = True
     score = 0
     while running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+        for event in pg.event.get():
+            if event.type == pg.QUIT:
                 running = False
 
         screen.fill((0, 0, 0))
         draw_maze(screen, maze, offset=OFFSET)
-        draw_pacman(screen, prev_board_pos, drawing_offset, maze, offset=OFFSET)
+        draw_movable(screen, pacman, maze, offset=OFFSET)
+        for ghost in ghosts:
+            draw_movable(screen, ghost, maze, offset=OFFSET)
+        
         label = font.render(f"{score}", 1, 'white')
         screen.blit(label, (0, 0))
 
-        pygame.display.flip()
+        pg.display.flip()
         clock.tick(50)
 
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_LEFT]:
+        keys = pg.key.get_pressed()
+        if keys[pg.K_LEFT]:
             new_dir = Direction.LEFT
-        if keys[pygame.K_RIGHT]:
+        if keys[pg.K_RIGHT]:
             new_dir = Direction.RIGHT
-        if keys[pygame.K_UP]:
+        if keys[pg.K_UP]:
             new_dir = Direction.UP
-        if keys[pygame.K_DOWN]:
+        if keys[pg.K_DOWN]:
             new_dir = Direction.DOWN
 
         time = clock.get_time() 
         distance = speed * time
-        if dir == Direction.LEFT:
-            drawing_offset = (drawing_offset[0] - distance, drawing_offset[1])
-        if dir == Direction.RIGHT:
-            drawing_offset = (drawing_offset[0] + distance, drawing_offset[1])
-        if dir == Direction.UP:
-            drawing_offset = (drawing_offset[0], drawing_offset[1] - distance)
-        if dir == Direction.DOWN:
-            drawing_offset = (drawing_offset[0], drawing_offset[1] + distance)
+        pacman.move(distance)
+        for ghost in ghosts:
+            ghost.move(distance)
+        
 
-        if abs(drawing_offset[0]) + abs(drawing_offset[1]) >= 1 or dir is None:
-            drawing_offset = (0.0, 0.0)
-            prev_board_pos = board_pos
-            board_pos, dir, reward = action(board_pos, dir, new_dir, maze)
-            if dir == new_dir:
+        if (abs(pacman.drawing_offset[0]) + abs(pacman.drawing_offset[1]) >= 1 
+            or (pacman.dir is None and new_dir is not None)
+            ):
+            state = (pacman.get_state(), [g.get_state() for g in ghosts])
+            (pacman_state, ghost_states), reward = action(state, new_dir, maze)
+
+            pacman.set_state(pacman_state)
+            for i, ghost in enumerate(ghosts):
+                ghost.set_state(ghost_states[i])
+            
+            if pacman.dir == new_dir:
                 new_dir = None
             score += reward
         
 
-    pygame.quit()
+    pg.quit()
