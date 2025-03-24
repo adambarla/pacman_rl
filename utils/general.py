@@ -64,11 +64,29 @@ def move(tile, dir, maze):
     new_pos = teleport(new_pos, maze)
     return new_pos
 
+def get_squared_distance(tile1, tile2):
+    return (tile1[0] - tile2[0])**2 + (tile1[1] - tile2[1])**2
 
-def update_ghosts(ghost_states, maze):
+
+def update_ghosts(pacman_state, ghost_states, maze):
+    player_tile = pacman_state[0]
     dir_list = [Direction.LEFT, Direction.RIGHT, Direction.UP, Direction.DOWN]
-    # for dir in dir_list:
-    #     print("dir", dir)
+    for i in range(len(ghost_states)):
+        tile = ghost_states[i][0]
+        dir = ghost_states[i][1]
+        best_dist = float('inf')
+        best_dir = None
+        best_tile = None
+        for new_dir in dir_list:
+            new_tile = move(tile, new_dir, maze)
+            if not can_turn(dir, new_dir) or is_wall(new_tile, maze): 
+                continue
+            dist = get_squared_distance(new_tile, player_tile)
+            if dist < best_dist:
+                best_dist = dist
+                best_dir = new_dir
+                best_tile = new_tile
+        ghost_states[i] = (best_tile, best_dir)
     return ghost_states
 
 def update_pacman(pacman_state, new_dir, maze):
@@ -100,7 +118,7 @@ def action(state, new_dir, maze):
     """
     pacman_state = state[0]
     ghost_states = state[1]
-    ghost_states = update_ghosts(ghost_states, maze)
+    ghost_states = update_ghosts(pacman_state, ghost_states, maze)
     pacman_state = update_pacman(pacman_state, new_dir, maze)
     reward = get_reward(state, maze)
 

@@ -56,6 +56,8 @@ if __name__ == "__main__":
     new_dir = None # acts as a buffer for the next direction, executed on the next intersection
     running = True
     score = 0
+    distance = 0
+    state = (pacman.get_state(), [g.get_state() for g in ghosts])
     while running:
         for event in pg.event.get():
             if event.type == pg.QUIT:
@@ -84,15 +86,18 @@ if __name__ == "__main__":
             new_dir = Direction.DOWN
 
         time = clock.get_time() 
-        distance = speed * time
-        pacman.move(distance)
+        new_distance = speed * time
+        distance += new_distance
+        pacman.move(new_distance)
         for ghost in ghosts:
-            ghost.move(distance)
-        
+            ghost.move(new_distance)
 
-        if (abs(pacman.drawing_offset[0]) + abs(pacman.drawing_offset[1]) >= 1 
-            or (pacman.dir is None and new_dir is not None)
-            ):
+        if dir is None:
+            dir = new_dir
+            new_dir = None
+
+        if distance >= 1:
+            distance = 0
             state = (pacman.get_state(), [g.get_state() for g in ghosts])
             (pacman_state, ghost_states), reward = action(state, new_dir, maze)
 
@@ -100,7 +105,7 @@ if __name__ == "__main__":
             for i, ghost in enumerate(ghosts):
                 ghost.set_state(ghost_states[i])
             
-            if pacman.dir == new_dir:
+            if pacman.dir == new_dir or pacman.dir is None:
                 new_dir = None
             score += reward
         
