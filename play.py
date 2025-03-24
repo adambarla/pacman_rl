@@ -12,6 +12,7 @@ from utils import (
     OFFSET,
 )
 
+CONTINUOUS = False
 
 def load_maze(maze):
     w = len(maze[0])
@@ -69,9 +70,9 @@ if __name__ == "__main__":
 
         screen.fill((0, 0, 0))
         draw_maze(screen, maze, offset=OFFSET)
-        draw_movable(screen, pacman, maze, offset=OFFSET)
+        draw_movable(screen, pacman, maze, offset=OFFSET, continuous=CONTINUOUS)
         for ghost in ghosts:
-            draw_movable(screen, ghost, maze, offset=OFFSET)
+            draw_movable(screen, ghost, maze, offset=OFFSET, continuous=CONTINUOUS)
 
         label = font.render(f"{score}", 1, "white")
         screen.blit(label, (0, 0))

@@ -28,14 +28,14 @@ def draw_maze(screen, maze, offset=0):
                 )
 
 
-def draw_movable(screen, movable, maze, offset=0, continuous=False):
+def draw_movable(screen, movable, maze, offset=0, continuous=True):
     w = maze.shape[1]
     h = maze.shape[0]
     pos = (
         (movable.prev_pos[0] + offset) * TILE_SIZE,
         (movable.prev_pos[1] + offset) * TILE_SIZE,
     )
-    if not continuous:
+    if continuous:
         pos = (
             pos[0] + movable.drawing_offset[0] * TILE_SIZE,
             pos[1] + movable.drawing_offset[1] * TILE_SIZE,
