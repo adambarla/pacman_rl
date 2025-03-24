@@ -1,4 +1,3 @@
-
 TILE_SIZE = 32
 OFFSET = 1
 
@@ -36,11 +35,13 @@ MAZE = [
     "============================",
 ]
 
+
 class Tile:
     EMPTY = 0
     WALL = 1
     COIN = 2
     POWERUP = 3
+
 
 class Direction:
     DOWN = 1

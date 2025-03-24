@@ -1,4 +1,3 @@
-
 from utils.constants import Direction, Tile
 
 
@@ -10,6 +9,7 @@ def is_wall(tile, maze):
         return True
     return False
 
+
 def is_coin(tile, maze):
     assert type(tile[0]) == int, "Position x must be an integer"
     assert type(tile[1]) == int, "Position y must be an integer"
@@ -18,6 +18,7 @@ def is_coin(tile, maze):
         return True
     return False
 
+
 def is_powerup(tile, maze):
     assert type(tile[0]) == int, "Position x must be an integer"
     assert type(tile[1]) == int, "Position y must be an integer"
@@ -25,6 +26,7 @@ def is_powerup(tile, maze):
     if maze[tile[1]][tile[0]] == Tile.POWERUP:
         return True
     return False
+
 
 def in_bounds(tile, maze):
     assert type(tile[0]) == int, "Position x must be an integer"
@@ -42,10 +44,16 @@ def in_bounds(tile, maze):
 def can_turn(dir, new_dir):
     if not dir:
         return True
-    if new_dir == Direction.LEFT and dir == Direction.RIGHT \
-        or new_dir == Direction.RIGHT and dir == Direction.LEFT \
-        or new_dir == Direction.UP and dir == Direction.DOWN \
-        or new_dir == Direction.DOWN and dir == Direction.UP:
+    if (
+        new_dir == Direction.LEFT
+        and dir == Direction.RIGHT
+        or new_dir == Direction.RIGHT
+        and dir == Direction.LEFT
+        or new_dir == Direction.UP
+        and dir == Direction.DOWN
+        or new_dir == Direction.DOWN
+        and dir == Direction.UP
+    ):
         return False
     return True
 
@@ -64,8 +72,9 @@ def move(tile, dir, maze):
     new_pos = teleport(new_pos, maze)
     return new_pos
 
+
 def get_squared_distance(tile1, tile2):
-    return (tile1[0] - tile2[0])**2 + (tile1[1] - tile2[1])**2
+    return (tile1[0] - tile2[0]) ** 2 + (tile1[1] - tile2[1]) ** 2
 
 
 def update_ghosts(pacman_state, ghost_states, maze):
@@ -74,12 +83,12 @@ def update_ghosts(pacman_state, ghost_states, maze):
     for i in range(len(ghost_states)):
         tile = ghost_states[i][0]
         dir = ghost_states[i][1]
-        best_dist = float('inf')
+        best_dist = float("inf")
         best_dir = None
         best_tile = None
         for new_dir in dir_list:
             new_tile = move(tile, new_dir, maze)
-            if not can_turn(dir, new_dir) or is_wall(new_tile, maze): 
+            if not can_turn(dir, new_dir) or is_wall(new_tile, maze):
                 continue
             dist = get_squared_distance(new_tile, player_tile)
             if dist < best_dist:
@@ -89,15 +98,20 @@ def update_ghosts(pacman_state, ghost_states, maze):
         ghost_states[i] = (best_tile, best_dir)
     return ghost_states
 
+
 def update_pacman(pacman_state, new_dir, maze):
     tile, dir = pacman_state
-    if new_dir and can_turn(dir, new_dir) \
-        and not is_wall(move(tile, new_dir, maze), maze):
+    if (
+        new_dir
+        and can_turn(dir, new_dir)
+        and not is_wall(move(tile, new_dir, maze), maze)
+    ):
         dir = new_dir
     new_tile = move(tile, dir, maze)
     if is_wall(new_tile, maze):
         return (tile, None)
     return (new_tile, dir)
+
 
 def get_reward(state, maze):
     pacman_state = state[0]
@@ -110,7 +124,7 @@ def get_reward(state, maze):
         return 5
     # todo: if is_ghost
     return 0
-    
+
 
 def action(state, new_dir, maze):
     """

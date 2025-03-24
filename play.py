@@ -34,7 +34,9 @@ def load_maze(maze):
     assert start_pos is not None, "Start position not found"
     assert ghost_spawn is not None, "Ghost spawn position not found"
     assert maze_array[start_pos[1]][start_pos[0]] == 0, "Start position is not empty"
-    assert maze_array[ghost_spawn[1]][ghost_spawn[0]] == 0, "Ghost spawn position is not empty"
+    assert (
+        maze_array[ghost_spawn[1]][ghost_spawn[0]] == 0
+    ), "Ghost spawn position is not empty"
     return maze_array, start_pos, ghost_spawn
 
 
@@ -44,16 +46,18 @@ if __name__ == "__main__":
     h = maze.shape[0]
 
     pg.init()
-    screen = pg.display.set_mode(((w + 2*OFFSET) * TILE_SIZE, (h + 2* OFFSET) * TILE_SIZE))
+    screen = pg.display.set_mode(
+        ((w + 2 * OFFSET) * TILE_SIZE, (h + 2 * OFFSET) * TILE_SIZE)
+    )
     pg.display.set_caption("pacman")
     clock = pg.time.Clock()
     font = pg.font.SysFont("berkeleymonotrial", 30)
 
-    speed = 5/1000 
+    speed = 5 / 1000
 
     pacman = Movable((255, 255, 0), start_pos)
     ghosts = [Movable((255, 0, 0), ghost_spawn)]
-    new_dir = None # acts as a buffer for the next direction, executed on the next intersection
+    new_dir = None  # acts as a buffer for the next direction, executed on the next intersection
     running = True
     score = 0
     distance = 0
@@ -68,8 +72,8 @@ if __name__ == "__main__":
         draw_movable(screen, pacman, maze, offset=OFFSET)
         for ghost in ghosts:
             draw_movable(screen, ghost, maze, offset=OFFSET)
-        
-        label = font.render(f"{score}", 1, 'white')
+
+        label = font.render(f"{score}", 1, "white")
         screen.blit(label, (0, 0))
 
         pg.display.flip()
@@ -85,7 +89,7 @@ if __name__ == "__main__":
         if keys[pg.K_DOWN]:
             new_dir = Direction.DOWN
 
-        time = clock.get_time() 
+        time = clock.get_time()
         new_distance = speed * time
         distance += new_distance
         pacman.move(new_distance)
@@ -104,10 +108,9 @@ if __name__ == "__main__":
             pacman.set_state(pacman_state)
             for i, ghost in enumerate(ghosts):
                 ghost.set_state(ghost_states[i])
-            
+
             if pacman.dir == new_dir or pacman.dir is None:
                 new_dir = None
             score += reward
-        
 
     pg.quit()
