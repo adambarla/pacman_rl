@@ -7,38 +7,13 @@ from utils import (
     action,
     draw_movable,
     draw_maze,
+    load_maze,
     TILE_SIZE,
     MAZE,
     OFFSET,
 )
 
-CONTINUOUS = False
-
-def load_maze(maze):
-    w = len(maze[0])
-    h = len(maze)
-    maze_array = np.zeros((h, w), dtype=int)
-    start_pos = None
-    ghost_spawn = None
-    for i, row in enumerate(maze):
-        for j, col in enumerate(row):
-            if maze[i][j] == "=" or maze[i][j] == "|" or maze[i][j] == "-":
-                maze_array[i][j] = 1
-            if maze[i][j] == ".":
-                maze_array[i][j] = 2
-            if maze[i][j] == "o":
-                maze_array[i][j] = 3
-            if maze[i][j] == "S":
-                start_pos = (j, i)
-            if maze[i][j] == "G":
-                ghost_spawn = (j, i)
-    assert start_pos is not None, "Start position not found"
-    assert ghost_spawn is not None, "Ghost spawn position not found"
-    assert maze_array[start_pos[1]][start_pos[0]] == 0, "Start position is not empty"
-    assert (
-        maze_array[ghost_spawn[1]][ghost_spawn[0]] == 0
-    ), "Ghost spawn position is not empty"
-    return maze_array, start_pos, ghost_spawn
+CONTINUOUS = True
 
 
 if __name__ == "__main__":

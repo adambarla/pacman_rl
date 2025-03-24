@@ -1,4 +1,5 @@
 from .general import (
+    load_maze,
     is_wall,
     is_coin,
     is_powerup,
