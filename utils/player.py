@@ -37,7 +37,7 @@ class Q_learning:
             self.Q[state] = {}
         for action in ACTIONS:
             if action not in self.Q[state]:
-                self.Q[state][action] = 0
+                self.Q[state][action] = 1
         best_action = None
         best_value = float("-inf")
         for action in self.Q[state]:
@@ -54,9 +54,9 @@ class Q_learning:
         if state not in self.Q:
             self.Q[state] = {}
         if action not in self.Q[next_state]:
-            self.Q[next_state][action] = 0
+            self.Q[next_state][action] = 1
         if action not in self.Q[state]:
-            self.Q[state][action] = 0
+            self.Q[state][action] = 1
         self.Q[state][action] += self.lr * (
             reward
             + self.gamma * max(self.Q[next_state].values())

@@ -54,87 +54,89 @@ if __name__ == "__main__":
     while running:
         n += 1
         score = 0
-        distance = 0
-        pacman = Movable((255, 255, 0), start_pos)
-        ghosts = [
-            Movable(
-                GHOST_COLORS[i],
-                ghost_spawn,
-                ghost_dens[i],
-                active=False,
-                size=TILE_SIZE // 2,
-            )
-            for i in range(4)
-        ]
-        state = (
-            pacman.get_state(),
-            (tuple([g.get_state() for g in ghosts])),
-            maze_to_state(start_maze),
-        )
-        maze = start_maze
-        new_dir = None  # acts as a buffer for the next direction, executed on the next intersection
-        t = 0
         lives = 3
-        while running and lives > 0:
-            for event in pg.event.get():
-                if event.type == pg.QUIT:
-                    running = False
-
-            screen.fill((0, 0, 0))
-            draw_maze(screen, maze, offset=OFFSET)
-            draw_movable(screen, pacman, maze, offset=OFFSET, continuous=continuous)
-            for ghost in ghosts:
-                draw_movable(screen, ghost, maze, offset=OFFSET, continuous=continuous)
-
-            screen.blit(font.render(f"{score}", 1, "yellow"), (OFFSET * TILE_SIZE, 0))
-            screen.blit(
-                font.render(f"{lives}", 1, "red"), ((w - 1 + OFFSET) * TILE_SIZE, 0)
+        maze = start_maze
+        while lives > 0:
+            t = 0
+            distance = 0
+            pacman = Movable((255, 255, 0), start_pos)
+            ghosts = [
+                Movable(
+                    GHOST_COLORS[i],
+                    ghost_spawn,
+                    ghost_dens[i],
+                    active=False,
+                    size=TILE_SIZE // 2,
+                )
+                for i in range(4)
+            ]
+            state = (
+                pacman.get_state(),
+                (tuple([g.get_state() for g in ghosts])),
+                maze_to_state(maze),
             )
-            screen.blit(
-                font.render(f"{t//TICK_PER_SECOND}", 1, "white"),
-                ((w - 1 + OFFSET) * TILE_SIZE, (h + OFFSET) * TILE_SIZE),
-            )
-            screen.blit(
-                font.render(f"{int(clock.get_fps())}", 1, "white"),
-                (OFFSET * TILE_SIZE, (h + OFFSET) * TILE_SIZE),
-            )
+            while True:
+                for event in pg.event.get():
+                    if event.type == pg.QUIT:
+                        running = False
 
-            pg.display.flip()
-            if player_playing:
-                clock.tick(TICK_PER_SECOND)
-                new_distance = SPEED_PER_SECOND / TICK_PER_SECOND
-            else:
-                clock.tick()
-                new_distance = 1
-            distance += new_distance
+                screen.fill((0, 0, 0))
+                draw_maze(screen, maze, offset=OFFSET)
+                draw_movable(screen, pacman, maze, offset=OFFSET, continuous=continuous)
+                for ghost in ghosts:
+                    draw_movable(
+                        screen, ghost, maze, offset=OFFSET, continuous=continuous
+                    )
 
-            pacman.move(new_distance)
-            for ghost in ghosts:
-                ghost.move(new_distance)
-
-            # tick the game state based on speed
-            if distance >= 1:
-                new_action = player.get_action(state=state)
-                if new_action is not None:
-                    new_dir = new_action
-                distance = 0
-                prev_state = state
-                state, reward = update(prev_state, new_dir, t)
-                if reward == REWARD_FOR_DEATH:
-                    lives -= 1
-                else:
-                    score += reward
-                pacman_state, ghost_states, maze, phase = state
-                player.update(
-                    state=prev_state, action=new_dir, reward=reward, next_state=state
+                screen.blit(
+                    font.render(f"{score}", 1, "yellow"), (OFFSET * TILE_SIZE, 0)
+                )
+                screen.blit(
+                    font.render(f"{lives}", 1, "red"), ((w - 1 + OFFSET) * TILE_SIZE, 0)
+                )
+                screen.blit(
+                    font.render(f"{t//TICK_PER_SECOND}", 1, "white"),
+                    ((w - 1 + OFFSET) * TILE_SIZE, (h + OFFSET) * TILE_SIZE),
+                )
+                screen.blit(
+                    font.render(f"{int(clock.get_fps())}", 1, "white"),
+                    (OFFSET * TILE_SIZE, (h + OFFSET) * TILE_SIZE),
                 )
 
-                pacman.set_state(pacman_state)
-                for i, ghost in enumerate(ghosts):
-                    ghost.set_state(ghost_states[i])
+                pg.display.flip()
+                if player_playing:
+                    clock.tick(TICK_PER_SECOND)
+                    new_distance = SPEED_PER_SECOND / TICK_PER_SECOND
+                else:
+                    clock.tick()
+                    new_distance = 1
+                distance += new_distance
 
-                if pacman.dir == new_dir or pacman.dir is None:
-                    new_dir = None
-            t += 1
+                pacman.move(new_distance)
+                for ghost in ghosts:
+                    ghost.move(new_distance)
+
+                # tick the game state based on speed
+                if distance >= 1:
+                    new_dir = player.get_action(state=state)
+                    distance = 0
+                    prev_state = state
+                    state, reward = update(prev_state, new_dir, t)
+                    if reward == REWARD_FOR_DEATH:
+                        lives -= 1
+                        break
+                    score += reward
+                    pacman_state, ghost_states, maze, phase = state
+                    player.update(
+                        state=prev_state,
+                        action=new_dir,
+                        reward=reward,
+                        next_state=state,
+                    )
+
+                    pacman.set_state(pacman_state)
+                    for i, ghost in enumerate(ghosts):
+                        ghost.set_state(ghost_states[i])
+                t += 1
 
     pg.quit()

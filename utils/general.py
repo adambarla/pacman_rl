@@ -6,6 +6,7 @@ from utils.constants import (
     REWARD_PER_COIN,
     REWARD_PER_KILL,
     REWARD_PER_POWERUP,
+    REWARD_SURVIVED,
     SCATTER_SECONDS,
     TICK_PER_SECOND,
     Direction,
@@ -221,7 +222,7 @@ def get_reward(state, maze, phase):
     tile = pacman_state[0]
     if is_ghost(tile, state[1]) and phase != Phase.FRIGHTENED:
         return REWARD_FOR_DEATH
-    reward = 0
+    reward = REWARD_SURVIVED
     if is_coin(tile, maze):
         maze[tile[1]][tile[0]] = Tile.EMPTY
         reward += REWARD_PER_COIN
