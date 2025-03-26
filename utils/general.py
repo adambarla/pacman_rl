@@ -217,7 +217,7 @@ def update_pacman(pacman_state, new_dir, maze):
     return (new_tile, dir, True)
 
 
-def get_reward(state, maze, phase):
+def colide(state, maze, phase):
     pacman_state = state[0]
     tile = pacman_state[0]
     if is_ghost(tile, state[1]) and phase != Phase.FRIGHTENED:
@@ -269,7 +269,7 @@ def update(state, new_dir, time):
     phase = get_phase(time)
     ghost_states = update_ghosts(pacman_state, ghost_states, maze, time, phase)
     pacman_state = update_pacman(pacman_state, new_dir, maze)
-    reward = get_reward(state, maze, phase)
+    reward = colide(state, maze, phase)
 
     return (pacman_state, ghost_states, maze_to_state(maze), phase), reward
 
