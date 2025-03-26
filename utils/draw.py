@@ -4,8 +4,8 @@ from utils.general import is_coin, is_powerup, is_wall
 
 
 def draw_maze(screen, maze, offset=0):
-    w = maze.shape[1]
-    h = maze.shape[0]
+    h = len(maze)
+    w = len(maze[0])
     for i in range(h):
         for j in range(w):
             x = (j + offset) * TILE_SIZE
@@ -29,8 +29,8 @@ def draw_maze(screen, maze, offset=0):
 
 
 def draw_movable(screen, movable, maze, offset=0, continuous=True):
-    w = maze.shape[1]
-    h = maze.shape[0]
+    h = len(maze)
+    w = len(maze[0])
     pos = (
         (movable.prev_pos[0] + offset) * TILE_SIZE,
         (movable.prev_pos[1] + offset) * TILE_SIZE,

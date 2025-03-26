@@ -1,4 +1,5 @@
-from utils.constants import Direction, Tile
+from utils.constants import ACTIONS, Direction, Tile
+import numpy as np
 
 
 def load_maze(maze):
@@ -8,24 +9,23 @@ def load_maze(maze):
     start_pos = None
     ghost_spawn = None
     for i, row in enumerate(maze):
-        for j, col in enumerate(row):
-            if maze[i][j] == "=" or maze[i][j] == "|" or maze[i][j] == "-":
+        for j, tile in enumerate(row):
+            if tile == "=" or tile == "|" or tile == "-":
                 maze_array[i][j] = 1
-            if maze[i][j] == ".":
+            elif tile == ".":
                 maze_array[i][j] = 2
-            if maze[i][j] == "o":
+            elif tile == "o":
                 maze_array[i][j] = 3
-            if maze[i][j] == "S":
+            elif tile == "S":
                 start_pos = (j, i)
-            if maze[i][j] == "G":
+            elif tile == "G":
                 ghost_spawn = (j, i)
     assert start_pos is not None, "Start position not found"
     assert ghost_spawn is not None, "Ghost spawn position not found"
     assert maze_array[start_pos[1]][start_pos[0]] == 0, "Start position is not empty"
-    assert (
-        maze_array[ghost_spawn[1]][ghost_spawn[0]] == 0
+    assert ( maze_array[ghost_spawn[1]][ghost_spawn[0]] == 0
     ), "Ghost spawn position is not empty"
-    return maze_array, start_pos, ghost_spawn
+    return maze_to_state(maze_array), start_pos, ghost_spawn
 
 
 def is_wall(tile, maze):
@@ -52,6 +52,12 @@ def is_powerup(tile, maze):
     assert in_bounds(tile, maze), "Position out of bounds"
     if maze[tile[1]][tile[0]] == Tile.POWERUP:
         return True
+    return False
+
+def is_ghost(tile, ghost_possitions):
+    for g in ghost_possitions:
+        if g[0] == tile:
+            return True
     return False
 
 
@@ -105,8 +111,9 @@ def get_squared_distance(tile1, tile2):
 
 
 def update_ghosts(pacman_state, ghost_states, maze):
+    ghost_states = list(ghost_states)
     player_tile = pacman_state[0]
-    dir_list = [Direction.LEFT, Direction.RIGHT, Direction.UP, Direction.DOWN]
+    dir_list = ACTIONS  
     for i in range(len(ghost_states)):
         tile = ghost_states[i][0]
         dir = ghost_states[i][1]
@@ -123,7 +130,7 @@ def update_ghosts(pacman_state, ghost_states, maze):
                 best_dir = new_dir
                 best_tile = new_tile
         ghost_states[i] = (best_tile, best_dir)
-    return ghost_states
+    return tuple(ghost_states)
 
 
 def update_pacman(pacman_state, new_dir, maze):
@@ -149,21 +156,35 @@ def get_reward(state, maze):
     if is_powerup(tile, maze):
         maze[tile[1]][tile[0]] = Tile.EMPTY
         return 5
-    # todo: if is_ghost
+    if is_ghost(tile, state[1]):
+        return -100
     return 0
 
+def maze_to_state(maze):
+    state = []
+    for i in range(len(maze)):
+        state.append(tuple(maze[i]))
+    return tuple(state)
 
-def action(state, new_dir, maze):
+def state_to_maze(state):
+    maze = np.zeros((len(state), len(state[0])), dtype=int)
+    for i in range(len(state)):
+        for j in range(len(state[i])):
+            maze[i][j] = state[i][j]
+    return maze
+
+def action(state, new_dir):
     """
     I am at tile, and I want to move in dir.
     """
     pacman_state = state[0]
     ghost_states = state[1]
+    maze = state_to_maze(state[2])
     ghost_states = update_ghosts(pacman_state, ghost_states, maze)
     pacman_state = update_pacman(pacman_state, new_dir, maze)
     reward = get_reward(state, maze)
 
-    return (pacman_state, ghost_states), reward
+    return (pacman_state, ghost_states, maze_to_state(maze)), reward
 
 
 def teleport(tile, maze):

@@ -1,5 +1,21 @@
+class Tile:
+    EMPTY = 0
+    WALL = 1
+    COIN = 2
+    POWERUP = 3
+
+
+class Direction:
+    DOWN = 1
+    LEFT = 2
+    RIGHT = 3
+    UP = 4
+
+
 TILE_SIZE = 32
 OFFSET = 1
+
+ACTIONS = [Direction.LEFT, Direction.DOWN, Direction.RIGHT, Direction.UP]
 
 MAZE = [
     "============================",
@@ -36,15 +52,3 @@ MAZE = [
 ]
 
 
-class Tile:
-    EMPTY = 0
-    WALL = 1
-    COIN = 2
-    POWERUP = 3
-
-
-class Direction:
-    DOWN = 1
-    LEFT = 2
-    RIGHT = 3
-    UP = 4
