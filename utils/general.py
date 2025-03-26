@@ -1,4 +1,4 @@
-from utils.constants import ACTIONS, Direction, Tile
+from utils.constants import ACTIONS, NEW_GHOST_WAIT, Direction, Tile
 import numpy as np
 
 
@@ -8,6 +8,7 @@ def load_maze(maze):
     maze_array = np.zeros((h, w), dtype=int)
     start_pos = None
     ghost_spawn = None
+    ghost_dens = []
     for i, row in enumerate(maze):
         for j, tile in enumerate(row):
             if tile == "=" or tile == "|" or tile == "-":
@@ -20,13 +21,17 @@ def load_maze(maze):
                 start_pos = (j, i)
             elif tile == "G":
                 ghost_spawn = (j, i)
+            elif tile == "D":
+                ghost_dens.append((j, i))
     assert start_pos is not None, "Start position not found"
     assert ghost_spawn is not None, "Ghost spawn position not found"
     assert maze_array[start_pos[1]][start_pos[0]] == 0, "Start position is not empty"
     assert (
         maze_array[ghost_spawn[1]][ghost_spawn[0]] == 0
     ), "Ghost spawn position is not empty"
-    return maze_to_state(maze_array), start_pos, ghost_spawn
+    if len(ghost_dens) == 0:
+        ghost_dens = [ghost_spawn]
+    return maze_to_state(maze_array), start_pos, ghost_spawn, ghost_dens
 
 
 def is_wall(tile, maze):
@@ -93,17 +98,17 @@ def can_turn(dir, new_dir):
     return True
 
 
-def move(tile, dir, maze):
+def move(tile, dir, maze, distance=1):
     if not dir:
         return tile
     if dir == Direction.LEFT:
-        new_pos = (tile[0] - 1, tile[1])
+        new_pos = (tile[0] - distance, tile[1])
     if dir == Direction.RIGHT:
-        new_pos = (tile[0] + 1, tile[1])
+        new_pos = (tile[0] + distance, tile[1])
     if dir == Direction.UP:
-        new_pos = (tile[0], tile[1] - 1)
+        new_pos = (tile[0], tile[1] - distance)
     if dir == Direction.DOWN:
-        new_pos = (tile[0], tile[1] + 1)
+        new_pos = (tile[0], tile[1] + distance)
     new_pos = teleport(new_pos, maze)
     return new_pos
 
@@ -112,31 +117,69 @@ def get_squared_distance(tile1, tile2):
     return (tile1[0] - tile2[0]) ** 2 + (tile1[1] - tile2[1]) ** 2
 
 
-def update_ghosts(pacman_state, ghost_states, maze):
+def get_ghost_target(pacman_tile, pacman_dir, ghost_tiles, maze, ghost_index):
+    scatter_targets = [
+        (0, 0),
+        (len(maze[0]) - 1, 0),
+        (0, len(maze) - 1),
+        (len(maze[0]) - 1, len(maze) - 1),
+    ]
+    if ghost_index == 0:  # blinky
+        return pacman_tile
+    if ghost_index == 1:  # pinky
+        return move(pacman_tile, pacman_dir, maze, 4)
+    if ghost_index == 2:  # inky
+        interm_tile = move(pacman_tile, pacman_dir, maze, 2)
+        # rotate vector from interm to blinky by 180 degrees
+        blinky_tile = ghost_tiles[0]
+        return (
+            interm_tile[0] + (interm_tile[0] - blinky_tile[0]),
+            interm_tile[1] + (interm_tile[1] - blinky_tile[1]),
+        )
+    if ghost_index == 3:  # clyde
+        dist = get_squared_distance(pacman_tile, ghost_tiles[3])
+        if dist < 64:
+            return scatter_targets[3]
+        return pacman_tile
+    # todo: add phase
+
+
+def find_best_dir(tile, dir, target, maze):
+    best_dist = float("inf")
+    best_dir = None
+    best_tile = None
+    for new_dir in ACTIONS:
+        new_tile = move(tile, new_dir, maze)
+        if not can_turn(dir, new_dir) or is_wall(new_tile, maze):
+            continue
+        dist = get_squared_distance(new_tile, target)
+        if dist < best_dist:
+            best_dist = dist
+            best_dir = new_dir
+            best_tile = new_tile
+    return best_tile, best_dir
+
+
+def update_ghosts(pacman_state, ghost_states, maze, time):
     ghost_states = list(ghost_states)
-    player_tile = pacman_state[0]
-    dir_list = ACTIONS
+    pacman_tile = pacman_state[0]
+    pacman_dir = pacman_state[1]
+    ghost_tiles = [g[0] for g in ghost_states]
     for i in range(len(ghost_states)):
-        tile = ghost_states[i][0]
         dir = ghost_states[i][1]
-        best_dist = float("inf")
-        best_dir = None
-        best_tile = None
-        for new_dir in dir_list:
-            new_tile = move(tile, new_dir, maze)
-            if not can_turn(dir, new_dir) or is_wall(new_tile, maze):
-                continue
-            dist = get_squared_distance(new_tile, player_tile)
-            if dist < best_dist:
-                best_dist = dist
-                best_dir = new_dir
-                best_tile = new_tile
-        ghost_states[i] = (best_tile, best_dir)
+        active = time // NEW_GHOST_WAIT + 1 > i
+        if not active:
+            continue
+        target = get_ghost_target(pacman_tile, pacman_dir, ghost_tiles, maze, i)
+        best_tile, best_dir = find_best_dir(ghost_tiles[i], dir, target, maze)
+
+        ghost_states[i] = (best_tile, best_dir, active)
     return tuple(ghost_states)
 
 
 def update_pacman(pacman_state, new_dir, maze):
-    tile, dir = pacman_state
+    tile = pacman_state[0]
+    dir = pacman_state[1]
     if (
         new_dir
         and can_turn(dir, new_dir)
@@ -145,8 +188,8 @@ def update_pacman(pacman_state, new_dir, maze):
         dir = new_dir
     new_tile = move(tile, dir, maze)
     if is_wall(new_tile, maze):
-        return (tile, None)
-    return (new_tile, dir)
+        return (tile, None, True)
+    return (new_tile, dir, True)
 
 
 def get_reward(state, maze):
@@ -178,14 +221,14 @@ def state_to_maze(state):
     return maze
 
 
-def action(state, new_dir):
+def update(state, new_dir, time):
     """
     I am at tile, and I want to move in dir.
     """
     pacman_state = state[0]
     ghost_states = state[1]
     maze = state_to_maze(state[2])
-    ghost_states = update_ghosts(pacman_state, ghost_states, maze)
+    ghost_states = update_ghosts(pacman_state, ghost_states, maze, time)
     pacman_state = update_pacman(pacman_state, new_dir, maze)
     reward = get_reward(state, maze)
 

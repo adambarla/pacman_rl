@@ -35,7 +35,12 @@ def draw_movable(screen, movable, maze, offset=0, continuous=True):
         (movable.prev_pos[0] + offset) * TILE_SIZE,
         (movable.prev_pos[1] + offset) * TILE_SIZE,
     )
-    if continuous:
+    if not movable.active:
+        pos = (
+            (movable.home_pos[0] + offset) * TILE_SIZE,
+            (movable.home_pos[1] + offset) * TILE_SIZE,
+        )
+    if continuous and movable.active:
         pos = (
             pos[0] + movable.drawing_offset[0] * TILE_SIZE,
             pos[1] + movable.drawing_offset[1] * TILE_SIZE,

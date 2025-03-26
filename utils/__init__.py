@@ -1,10 +1,4 @@
-from .general import (
-    load_maze,
-    is_wall,
-    is_coin,
-    is_powerup,
-    action,
-)
+from .general import load_maze, is_wall, is_coin, is_powerup, update
 
 from .constants import (
     TILE_SIZE,

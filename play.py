@@ -4,7 +4,7 @@ import pygame as pg
 from utils import (
     Direction,
     Movable,
-    action,
+    update,
     draw_movable,
     draw_maze,
     load_maze,
@@ -12,7 +12,7 @@ from utils import (
     MAZE,
     OFFSET,
 )
-from utils.constants import ACTIONS
+from utils.constants import ACTIONS, GHOST_COLORS
 from utils.general import maze_to_state
 
 CONTINUOUS = True
@@ -35,7 +35,7 @@ def get_action(**kwargs):
 if __name__ == "__main__":
 
     pg.init()
-    start_maze, start_pos, ghost_spawn = load_maze(MAZE)
+    start_maze, start_pos, ghost_spawn, ghost_dens = load_maze(MAZE)
     h = len(start_maze)
     w = len(start_maze[0])
     screen = pg.display.set_mode(
@@ -46,27 +46,38 @@ if __name__ == "__main__":
     clock = pg.time.Clock()
     font = pg.font.SysFont("berkeleymonotrial", 30)
 
-    speed = 500 / 1000
+    speed = 5 / 1000
 
     running = True
     Q = {}
     T = 100
     n = 0
+    active_ghosts = 1
     while running:
         n += 1
         score = 0
         distance = 0
         pacman = Movable((255, 255, 0), start_pos)
-        ghosts = [Movable((255, 0, 0), ghost_spawn)]
+        ghosts = [
+            Movable(
+                GHOST_COLORS[i],
+                ghost_spawn,
+                ghost_dens[i],
+                active=False,
+                size=TILE_SIZE // 2,
+            )
+            for i in range(4)
+        ]
         state = (
             pacman.get_state(),
-            tuple([g.get_state() for g in ghosts]),
+            (tuple([g.get_state() for g in ghosts])),
             maze_to_state(start_maze),
         )
         maze = start_maze
         new_dir = None  # acts as a buffer for the next direction, executed on the next intersection
         t = 0
         T_episode = T + n * 10
+        continuous = False
         while t < T_episode:
             for event in pg.event.get():
                 if event.type == pg.QUIT:
@@ -74,9 +85,9 @@ if __name__ == "__main__":
 
             screen.fill((0, 0, 0))
             draw_maze(screen, maze, offset=OFFSET)
-            draw_movable(screen, pacman, maze, offset=OFFSET, continuous=CONTINUOUS)
+            draw_movable(screen, pacman, maze, offset=OFFSET, continuous=continuous)
             for ghost in ghosts:
-                draw_movable(screen, ghost, maze, offset=OFFSET, continuous=CONTINUOUS)
+                draw_movable(screen, ghost, maze, offset=OFFSET, continuous=continuous)
 
             label = font.render(f"{score}", 1, "white")
             screen.blit(label, (0, 0))
@@ -124,13 +135,13 @@ if __name__ == "__main__":
                 dir = new_dir
                 new_dir = None
 
-            if distance >= 1:
+            if distance >= 1 or True:
                 new_action = get_action(Q, state)
                 if new_action is not None:
                     new_dir = new_action
                 distance = 0
                 prev_state = state
-                state, reward = action(prev_state, new_dir)
+                state, reward = update(prev_state, new_dir, t)
                 pacman_state, ghost_states, maze = state
                 update_Q(Q, prev_state, new_dir, reward, state)
                 t += 1
