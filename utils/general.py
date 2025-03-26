@@ -23,7 +23,8 @@ def load_maze(maze):
     assert start_pos is not None, "Start position not found"
     assert ghost_spawn is not None, "Ghost spawn position not found"
     assert maze_array[start_pos[1]][start_pos[0]] == 0, "Start position is not empty"
-    assert ( maze_array[ghost_spawn[1]][ghost_spawn[0]] == 0
+    assert (
+        maze_array[ghost_spawn[1]][ghost_spawn[0]] == 0
     ), "Ghost spawn position is not empty"
     return maze_to_state(maze_array), start_pos, ghost_spawn
 
@@ -53,6 +54,7 @@ def is_powerup(tile, maze):
     if maze[tile[1]][tile[0]] == Tile.POWERUP:
         return True
     return False
+
 
 def is_ghost(tile, ghost_possitions):
     for g in ghost_possitions:
@@ -113,7 +115,7 @@ def get_squared_distance(tile1, tile2):
 def update_ghosts(pacman_state, ghost_states, maze):
     ghost_states = list(ghost_states)
     player_tile = pacman_state[0]
-    dir_list = ACTIONS  
+    dir_list = ACTIONS
     for i in range(len(ghost_states)):
         tile = ghost_states[i][0]
         dir = ghost_states[i][1]
@@ -160,11 +162,13 @@ def get_reward(state, maze):
         return -100
     return 0
 
+
 def maze_to_state(maze):
     state = []
     for i in range(len(maze)):
         state.append(tuple(maze[i]))
     return tuple(state)
+
 
 def state_to_maze(state):
     maze = np.zeros((len(state), len(state[0])), dtype=int)
@@ -172,6 +176,7 @@ def state_to_maze(state):
         for j in range(len(state[i])):
             maze[i][j] = state[i][j]
     return maze
+
 
 def action(state, new_dir):
     """

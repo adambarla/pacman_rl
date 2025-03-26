@@ -17,6 +17,7 @@ from utils.general import maze_to_state
 
 CONTINUOUS = True
 
+
 def get_action(**kwargs):
     new_dir = None
     keys = pg.key.get_pressed()
@@ -30,6 +31,7 @@ def get_action(**kwargs):
         new_dir = Direction.DOWN
     return new_dir
 
+
 if __name__ == "__main__":
 
     pg.init()
@@ -37,8 +39,8 @@ if __name__ == "__main__":
     h = len(start_maze)
     w = len(start_maze[0])
     screen = pg.display.set_mode(
-            ((w + 2 * OFFSET) * TILE_SIZE, (h + 2 * OFFSET) * TILE_SIZE)
-        )
+        ((w + 2 * OFFSET) * TILE_SIZE, (h + 2 * OFFSET) * TILE_SIZE)
+    )
 
     pg.display.set_caption("pacman")
     clock = pg.time.Clock()
@@ -56,13 +58,15 @@ if __name__ == "__main__":
         distance = 0
         pacman = Movable((255, 255, 0), start_pos)
         ghosts = [Movable((255, 0, 0), ghost_spawn)]
-        state = (pacman.get_state(), 
-                tuple([g.get_state() for g in ghosts]), 
-                maze_to_state(start_maze))
+        state = (
+            pacman.get_state(),
+            tuple([g.get_state() for g in ghosts]),
+            maze_to_state(start_maze),
+        )
         maze = start_maze
         new_dir = None  # acts as a buffer for the next direction, executed on the next intersection
         t = 0
-        T_episode = T + n*10
+        T_episode = T + n * 10
         while t < T_episode:
             for event in pg.event.get():
                 if event.type == pg.QUIT:
@@ -80,14 +84,12 @@ if __name__ == "__main__":
             pg.display.flip()
             clock.tick(50)
 
-
             time = clock.get_time()
             new_distance = speed * time
             distance += new_distance
             pacman.move(new_distance)
             for ghost in ghosts:
                 ghost.move(new_distance)
-
 
             def get_action(Q, state):
                 if state not in Q:
@@ -114,8 +116,9 @@ if __name__ == "__main__":
                     Q[next_state][action] = 0
                 if action not in Q[state]:
                     Q[state][action] = 0
-                Q[state][action] += lr * (reward + gamma * max(Q[next_state].values()) - Q[state][action])
-
+                Q[state][action] += lr * (
+                    reward + gamma * max(Q[next_state].values()) - Q[state][action]
+                )
 
             if dir is None:
                 dir = new_dir
@@ -132,7 +135,6 @@ if __name__ == "__main__":
                 update_Q(Q, prev_state, new_dir, reward, state)
                 t += 1
                 # print(Q)
-
 
                 pacman.set_state(pacman_state)
                 for i, ghost in enumerate(ghosts):
