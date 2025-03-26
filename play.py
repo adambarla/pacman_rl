@@ -1,3 +1,4 @@
+from enum import CONTINUOUS
 import random
 import pygame as pg
 
@@ -12,24 +13,16 @@ from utils import (
     MAZE,
     OFFSET,
 )
-from utils.constants import ACTIONS, GHOST_COLORS
+from utils.constants import (
+    GHOST_COLORS,
+    PLAYER_PLAYING,
+    REWARD_FOR_DEATH,
+    REWARD_PER_KILL,
+    SPEED_PER_SECOND,
+    TICK_PER_SECOND,
+)
 from utils.general import maze_to_state
-
-CONTINUOUS = True
-
-
-def get_action(**kwargs):
-    new_dir = None
-    keys = pg.key.get_pressed()
-    if keys[pg.K_LEFT]:
-        new_dir = Direction.LEFT
-    if keys[pg.K_RIGHT]:
-        new_dir = Direction.RIGHT
-    if keys[pg.K_UP]:
-        new_dir = Direction.UP
-    if keys[pg.K_DOWN]:
-        new_dir = Direction.DOWN
-    return new_dir
+from utils.player import Player, Q_learning
 
 
 if __name__ == "__main__":
@@ -44,12 +37,17 @@ if __name__ == "__main__":
 
     pg.display.set_caption("pacman")
     clock = pg.time.Clock()
-    font = pg.font.SysFont("berkeleymonotrial", 30)
+    font = pg.font.SysFont("berkeleymonotrial", TILE_SIZE)
 
-    speed = 5 / 1000
+    player_playing = PLAYER_PLAYING
+    if player_playing:
+        player = Player()
+        continuous = CONTINUOUS
+    else:
+        player = Q_learning()
+        continuous = False
 
     running = True
-    Q = {}
     T = 100
     n = 0
     active_ghosts = 1
@@ -76,9 +74,8 @@ if __name__ == "__main__":
         maze = start_maze
         new_dir = None  # acts as a buffer for the next direction, executed on the next intersection
         t = 0
-        T_episode = T + n * 10
-        continuous = False
-        while t < T_episode:
+        lives = 3
+        while running and lives > 0:
             for event in pg.event.get():
                 if event.type == pg.QUIT:
                     running = False
@@ -89,63 +86,48 @@ if __name__ == "__main__":
             for ghost in ghosts:
                 draw_movable(screen, ghost, maze, offset=OFFSET, continuous=continuous)
 
-            label = font.render(f"{score}", 1, "white")
-            screen.blit(label, (0, 0))
+            screen.blit(font.render(f"{score}", 1, "yellow"), (OFFSET * TILE_SIZE, 0))
+            screen.blit(
+                font.render(f"{lives}", 1, "red"), ((w - 1 + OFFSET) * TILE_SIZE, 0)
+            )
+            screen.blit(
+                font.render(f"{t//TICK_PER_SECOND}", 1, "white"),
+                ((w - 1 + OFFSET) * TILE_SIZE, (h + OFFSET) * TILE_SIZE),
+            )
+            screen.blit(
+                font.render(f"{int(clock.get_fps())}", 1, "white"),
+                (OFFSET * TILE_SIZE, (h + OFFSET) * TILE_SIZE),
+            )
 
             pg.display.flip()
-            clock.tick(50)
-
-            time = clock.get_time()
-            new_distance = speed * time
+            if player_playing:
+                clock.tick(TICK_PER_SECOND)
+                new_distance = SPEED_PER_SECOND / TICK_PER_SECOND
+            else:
+                clock.tick()
+                new_distance = 1
             distance += new_distance
+
             pacman.move(new_distance)
             for ghost in ghosts:
                 ghost.move(new_distance)
 
-            def get_action(Q, state):
-                if state not in Q:
-                    Q[state] = {}
-                for action in ACTIONS:
-                    if action not in Q[state]:
-                        Q[state][action] = 0
-                best_action = None
-                best_value = float("-inf")
-                for action in Q[state]:
-                    if Q[state][action] > best_value:
-                        best_value = Q[state][action]
-                        best_action = action
-                if best_action is None:
-                    return random.choice(ACTIONS)
-                return best_action
-
-            def update_Q(Q, state, action, reward, next_state, lr=0.1, gamma=0.9):
-                if next_state not in Q:
-                    Q[next_state] = {}
-                if state not in Q:
-                    Q[state] = {}
-                if action not in Q[next_state]:
-                    Q[next_state][action] = 0
-                if action not in Q[state]:
-                    Q[state][action] = 0
-                Q[state][action] += lr * (
-                    reward + gamma * max(Q[next_state].values()) - Q[state][action]
-                )
-
-            if dir is None:
-                dir = new_dir
-                new_dir = None
-
-            if distance >= 1 or True:
-                new_action = get_action(Q, state)
+            # tick the game state based on speed
+            if distance >= 1:
+                new_action = player.get_action(state=state)
                 if new_action is not None:
                     new_dir = new_action
                 distance = 0
                 prev_state = state
                 state, reward = update(prev_state, new_dir, t)
-                pacman_state, ghost_states, maze = state
-                update_Q(Q, prev_state, new_dir, reward, state)
-                t += 1
-                # print(Q)
+                if reward == REWARD_FOR_DEATH:
+                    lives -= 1
+                else:
+                    score += reward
+                pacman_state, ghost_states, maze, phase = state
+                player.update(
+                    state=prev_state, action=new_dir, reward=reward, next_state=state
+                )
 
                 pacman.set_state(pacman_state)
                 for i, ghost in enumerate(ghosts):
@@ -153,6 +135,6 @@ if __name__ == "__main__":
 
                 if pacman.dir == new_dir or pacman.dir is None:
                     new_dir = None
-                score += reward
+            t += 1
 
     pg.quit()

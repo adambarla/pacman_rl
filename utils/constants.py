@@ -12,14 +12,35 @@ class Direction:
     UP = 4
 
 
-TILE_SIZE = 32
+class Phase:
+    SCATTER = 1
+    CHASE = 2
+    FRIGHTENED = 3
+    EATEN = 4
+
+
+PLAYER_PLAYING = True
+
+TILE_SIZE = 16
 OFFSET = 1
+
+TICK_PER_SECOND = 60
+TICK_TIME = 1000 / TICK_PER_SECOND
+SCATTER_SECONDS = 7
+CHASE_SECONDS = 20
+SPEED_PER_SECOND = 5
+NEW_GHOST_WAIT = 3  # seconds
+
+REWARD_PER_COIN = 1
+REWARD_PER_POWERUP = 5
+REWARD_FOR_DEATH = -100
+REWARD_PER_KILL = 200
+
 
 ACTIONS = [Direction.LEFT, Direction.DOWN, Direction.RIGHT, Direction.UP]
 
 GHOST_COLORS = [(255, 0, 0), (255, 184, 255), (0, 255, 255), (255, 184, 81)]
 
-NEW_GHOST_WAIT = 300
 
 MAZE = [
     "============================",

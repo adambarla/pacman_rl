@@ -1,4 +1,17 @@
-from utils.constants import ACTIONS, NEW_GHOST_WAIT, Direction, Tile
+from utils.constants import (
+    ACTIONS,
+    CHASE_SECONDS,
+    NEW_GHOST_WAIT,
+    REWARD_FOR_DEATH,
+    REWARD_PER_COIN,
+    REWARD_PER_KILL,
+    REWARD_PER_POWERUP,
+    SCATTER_SECONDS,
+    TICK_PER_SECOND,
+    Direction,
+    Phase,
+    Tile,
+)
 import numpy as np
 
 
@@ -117,13 +130,23 @@ def get_squared_distance(tile1, tile2):
     return (tile1[0] - tile2[0]) ** 2 + (tile1[1] - tile2[1]) ** 2
 
 
-def get_ghost_target(pacman_tile, pacman_dir, ghost_tiles, maze, ghost_index):
+def get_ghost_target(
+    pacman_tile,
+    pacman_dir,
+    ghost_tiles,
+    maze,
+    ghost_index,
+    phase=0,
+):
     scatter_targets = [
         (0, 0),
         (len(maze[0]) - 1, 0),
         (0, len(maze) - 1),
         (len(maze[0]) - 1, len(maze) - 1),
     ]
+    if phase == Phase.SCATTER:
+        return scatter_targets[ghost_index]
+
     if ghost_index == 0:  # blinky
         return pacman_tile
     if ghost_index == 1:  # pinky
@@ -141,7 +164,8 @@ def get_ghost_target(pacman_tile, pacman_dir, ghost_tiles, maze, ghost_index):
         if dist < 64:
             return scatter_targets[3]
         return pacman_tile
-    # todo: add phase
+
+    # todo: add phases
 
 
 def find_best_dir(tile, dir, target, maze):
@@ -160,17 +184,17 @@ def find_best_dir(tile, dir, target, maze):
     return best_tile, best_dir
 
 
-def update_ghosts(pacman_state, ghost_states, maze, time):
+def update_ghosts(pacman_state, ghost_states, maze, time, phase):
     ghost_states = list(ghost_states)
     pacman_tile = pacman_state[0]
     pacman_dir = pacman_state[1]
     ghost_tiles = [g[0] for g in ghost_states]
     for i in range(len(ghost_states)):
         dir = ghost_states[i][1]
-        active = time // NEW_GHOST_WAIT + 1 > i
+        active = time // TICK_PER_SECOND // NEW_GHOST_WAIT + 1 > i
         if not active:
             continue
-        target = get_ghost_target(pacman_tile, pacman_dir, ghost_tiles, maze, i)
+        target = get_ghost_target(pacman_tile, pacman_dir, ghost_tiles, maze, i, phase)
         best_tile, best_dir = find_best_dir(ghost_tiles[i], dir, target, maze)
 
         ghost_states[i] = (best_tile, best_dir, active)
@@ -192,18 +216,21 @@ def update_pacman(pacman_state, new_dir, maze):
     return (new_tile, dir, True)
 
 
-def get_reward(state, maze):
+def get_reward(state, maze, phase):
     pacman_state = state[0]
     tile = pacman_state[0]
+    if is_ghost(tile, state[1]) and phase != Phase.FRIGHTENED:
+        return REWARD_FOR_DEATH
+    reward = 0
     if is_coin(tile, maze):
         maze[tile[1]][tile[0]] = Tile.EMPTY
-        return 1
+        reward += REWARD_PER_COIN
     if is_powerup(tile, maze):
         maze[tile[1]][tile[0]] = Tile.EMPTY
-        return 5
-    if is_ghost(tile, state[1]):
-        return -100
-    return 0
+        reward += REWARD_PER_POWERUP
+    if is_ghost(tile, state[1]) and phase == Phase.FRIGHTENED:
+        reward += REWARD_PER_KILL
+    return reward
 
 
 def maze_to_state(maze):
@@ -221,6 +248,16 @@ def state_to_maze(state):
     return maze
 
 
+def get_phase(time):
+    is_scatter = (time // TICK_PER_SECOND) % (
+        CHASE_SECONDS + SCATTER_SECONDS
+    ) < SCATTER_SECONDS
+    if is_scatter:
+        return Phase.SCATTER
+    else:
+        return Phase.CHASE
+
+
 def update(state, new_dir, time):
     """
     I am at tile, and I want to move in dir.
@@ -228,11 +265,12 @@ def update(state, new_dir, time):
     pacman_state = state[0]
     ghost_states = state[1]
     maze = state_to_maze(state[2])
-    ghost_states = update_ghosts(pacman_state, ghost_states, maze, time)
+    phase = get_phase(time)
+    ghost_states = update_ghosts(pacman_state, ghost_states, maze, time, phase)
     pacman_state = update_pacman(pacman_state, new_dir, maze)
-    reward = get_reward(state, maze)
+    reward = get_reward(state, maze, phase)
 
-    return (pacman_state, ghost_states, maze_to_state(maze)), reward
+    return (pacman_state, ghost_states, maze_to_state(maze), phase), reward
 
 
 def teleport(tile, maze):
