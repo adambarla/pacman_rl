@@ -217,10 +217,9 @@ def update_pacman(pacman_state, new_dir, maze):
     return (new_tile, dir, True)
 
 
-def colide(state, maze, phase):
-    pacman_state = state[0]
+def colide(pacman_state, ghost_states, maze, phase):
     tile = pacman_state[0]
-    if is_ghost(tile, state[1]) and phase != Phase.FRIGHTENED:
+    if is_ghost(tile, ghost_states) and phase != Phase.FRIGHTENED:
         return REWARD_FOR_DEATH
     reward = REWARD_SURVIVED
     if is_coin(tile, maze):
@@ -229,7 +228,7 @@ def colide(state, maze, phase):
     if is_powerup(tile, maze):
         maze[tile[1]][tile[0]] = Tile.EMPTY
         reward += REWARD_PER_POWERUP
-    if is_ghost(tile, state[1]) and phase == Phase.FRIGHTENED:
+    if is_ghost(tile, ghost_states) and phase == Phase.FRIGHTENED:
         reward += REWARD_PER_KILL
     return reward
 
@@ -268,9 +267,11 @@ def update(state, new_dir, time):
     maze = state_to_maze(state[2])
     phase = get_phase(time)
     ghost_states = update_ghosts(pacman_state, ghost_states, maze, time, phase)
+    reward = colide(pacman_state, ghost_states, maze, phase)
+    if reward == REWARD_FOR_DEATH:
+        return (pacman_state, ghost_states, maze_to_state(maze), phase), reward
     pacman_state = update_pacman(pacman_state, new_dir, maze)
-    reward = colide(state, maze, phase)
-
+    reward = colide(pacman_state, ghost_states, maze, phase)  # only ghosts moved before
     return (pacman_state, ghost_states, maze_to_state(maze), phase), reward
 
 

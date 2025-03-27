@@ -28,7 +28,7 @@ def draw_maze(screen, maze, offset=0):
                 )
 
 
-def draw_movable(screen, movable, maze, offset=0, continuous=True):
+def draw_movable(screen, movable, maze, offset=0, continuous=True, ghost=False):
     h = len(maze)
     w = len(maze[0])
     pos = (
@@ -47,6 +47,17 @@ def draw_movable(screen, movable, maze, offset=0, continuous=True):
         )
     pos = (pos[0] + movable.size, pos[1] + movable.size)
     pg.draw.circle(screen, movable.color, pos, movable.size)
+    if ghost:
+        pg.draw.rect(
+            screen,
+            movable.color,
+            (
+                pos[0] - movable.size,
+                pos[1],
+                movable.size * 2,
+                movable.size,
+            ),
+        )
     # draw aditional movable one board width away and one board height away
     if movable.prev_pos[0] == 0:
         pg.draw.circle(

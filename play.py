@@ -1,4 +1,3 @@
-from enum import CONTINUOUS
 import pygame as pg
 import argparse
 
@@ -14,10 +13,11 @@ from utils import (
     OFFSET,
 )
 from utils.constants import (
+    CONTINUOUS,
+    DRAW_PERIOD,
     GHOST_COLORS,
     PLAYER_PLAYING,
     REWARD_FOR_DEATH,
-    REWARD_PER_KILL,
     SPEED_PER_SECOND,
     TICK_PER_SECOND,
 )
@@ -33,6 +33,11 @@ if __name__ == "__main__":
         "--player",
         default=PLAYER_PLAYING,
         help="Play as a human player",
+    )
+    argparse.add_argument(
+        "--continuous",
+        default=CONTINUOUS,
+        help="Play in continuous mode",
     )
     args = argparse.parse_args()
 
@@ -51,13 +56,10 @@ if __name__ == "__main__":
     player_playing = args.player
     if player_playing:
         player = Player()
-        continuous = CONTINUOUS
     else:
         player = Q_learning()
-        continuous = False
 
     running = True
-    T = 1000
     n = 0
     active_ghosts = 1
     best_score = 0
@@ -90,15 +92,20 @@ if __name__ == "__main__":
                     if event.type == pg.QUIT:
                         running = False
 
-                if n % T == 0:
+                if player_playing or n % DRAW_PERIOD == 0:
                     screen.fill((0, 0, 0))
                     draw_maze(screen, maze, offset=OFFSET)
                     draw_movable(
-                        screen, pacman, maze, offset=OFFSET, continuous=continuous
+                        screen, pacman, maze, offset=OFFSET, continuous=args.continuous
                     )
                     for ghost in ghosts:
                         draw_movable(
-                            screen, ghost, maze, offset=OFFSET, continuous=continuous
+                            screen,
+                            ghost,
+                            maze,
+                            offset=OFFSET,
+                            continuous=args.continuous,
+                            ghost=True,
                         )
 
                     screen.blit(
@@ -119,7 +126,7 @@ if __name__ == "__main__":
                     pg.display.flip()
 
                 new_distance = 0
-                if player_playing or n % T == 0:
+                if player_playing or n % DRAW_PERIOD == 0:
                     t += 1
                     clock.tick(TICK_PER_SECOND)
                     new_distance = SPEED_PER_SECOND / TICK_PER_SECOND
